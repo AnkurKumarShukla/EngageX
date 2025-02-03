@@ -1,0 +1,4 @@
+.venv
+social_media_agent/__pycache__
+social_media_agent/.env
+social_media_agent/tools/__pycache__
