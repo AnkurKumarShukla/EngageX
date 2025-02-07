@@ -14,7 +14,9 @@ from cdp_langchain.utils import CdpAgentkitWrapper
 from langchain_mistralai import ChatMistralAI
 from langgraph.checkpoint.memory import MemorySaver
 from tools.graph_uniswap_tool import uniswap_analysis_tool
-
+import asyncio
+import websockets
+import json
 memory = MemorySaver()
 # Load environment variables
 load_dotenv()
@@ -39,14 +41,15 @@ combined_tools = base_tools + twitter_tools + [uniswap_analysis_tool]
 # Initialize FastAPI
 app = FastAPI()
 
-# Define the request model
+# Define the request modela
 class CampaignRequest(BaseModel):
     context: str
     llm_type: str  # "openai" or "gemini"
 
 # Define the response model
 class CampaignResponse(BaseModel):
-    result: str
+    # restult is list
+    result: list
 
 class Web3SocialMarketingAgent:
     def __init__(self, llm, tools):
@@ -67,28 +70,29 @@ class Web3SocialMarketingAgent:
             checkpointer=memory
         )
     
-    def print_stream(stream):
-        for s in stream:
-            message = s["messages"][-1]
-            if isinstance(message, tuple):
-                print(message)
-            else:
-                message.pretty_print()
+    
 
     def run_campaign(self, context):
         
         config = {"configurable": {"thread_id": "1"}}
         inputs = {"messages": [("user", "{}".format(context))]}
         def print_stream(stream):
+            messages = []   
             for s in stream:
                 message = s["messages"][-1]
+                # send this to websocket to display
+                messages.append(message)
                 if isinstance(message, tuple):
                     print(message)
                 else:
                     message.pretty_print()
-        print_stream(self.agent.stream(inputs, config=config, stream_mode="values"))
+            return messages
+                
+        stream=self.agent.stream(inputs, config=config, stream_mode="values")
+        stream_data=print_stream(stream)
+        # print(stream)
 
-        return "succes"
+        return stream_data
 
 def plan_generator(context: str, tools, llm) -> str:
     # Create a plan for the based on user context using llm
@@ -107,6 +111,8 @@ def plan_generator(context: str, tools, llm) -> str:
 # Define the request model for the planner endpoint
 class PlanRequest(BaseModel):
     context: str
+
+
 
 @app.post("/planner")
 def planner_endpoint(request: PlanRequest):
@@ -135,7 +141,7 @@ async def run_campaign(campaign: CampaignRequest):
         # plan = plan_generator(campaign.context, combined_tools, plan_llm)
 
         # Run the campaign
-        result = agent.run_campaign(campaign.context)
+        result =  agent.run_campaign(campaign.context)
 
         return CampaignResponse(result=result)
 
