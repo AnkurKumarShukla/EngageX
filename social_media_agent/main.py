@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from langchain.tools import Tool
 from langchain_openai import ChatOpenAI
@@ -10,13 +11,16 @@ from twitter_langchain import TwitterApiWrapper, TwitterToolkit
 from langchain_google_genai import ChatGoogleGenerativeAI
 from cdp_langchain.agent_toolkits import CdpToolkit
 from cdp_langchain.utils import CdpAgentkitWrapper
+from langchain_mistralai import ChatMistralAI
+from langgraph.checkpoint.memory import MemorySaver
+from tools.graph_uniswap_tool import uniswap_analysis_tool
 
+memory = MemorySaver()
 # Load environment variables
 load_dotenv()
 
 # Initialize TwitterApiWrapper
 twitter_api_wrapper = TwitterApiWrapper()
-print(twitter_api_wrapper)
 
 # Initialize CDP AgentKit wrapper
 cdp = CdpAgentkitWrapper()
@@ -25,14 +29,13 @@ cdp = CdpAgentkitWrapper()
 cdp_toolkit = CdpToolkit.from_cdp_agentkit_wrapper(cdp)
 twitter_toolkit = TwitterToolkit.from_twitter_api_wrapper(twitter_api_wrapper)
 
-print(cdp_toolkit)
-print("==========================================================")
-print(twitter_toolkit)
-
 # Get tools from toolkits
 twitter_tools = twitter_toolkit.get_tools()
 base_tools = cdp_toolkit.get_tools()
-# print(base_tools)
+
+# Combine all tools
+combined_tools = base_tools + twitter_tools + [uniswap_analysis_tool]
+
 # Initialize FastAPI
 app = FastAPI()
 
@@ -45,66 +48,125 @@ class CampaignRequest(BaseModel):
 class CampaignResponse(BaseModel):
     result: str
 
-@app.get("/test-twitter")
-async def test_twitter_post():
-    content = "This is a test tweet from FastAPI!"
-    result = "Simulated Twitter post"
-    return {"result": result}
+class Web3SocialMarketingAgent:
+    def __init__(self, llm, tools):
+        self.llm = llm
+        self.tools = tools
+        self.agent = self._create_agent()
+
+    def _create_agent(self):
+        return create_react_agent(
+            self.llm,
+            self.tools,
+            state_modifier=(
+                "You are a sophisticated Web 3 Social Marketing Agent. "
+                "You can interact with blockchain tools and social media platforms. "
+                "Your goal is to create engaging content, deploy tokens, and manage social media presence. "
+                "Use blockchain tools to generate content and Twitter tools to share insights."
+            ),
+            checkpointer=memory
+        )
+    
+    def print_stream(stream):
+        for s in stream:
+            message = s["messages"][-1]
+            if isinstance(message, tuple):
+                print(message)
+            else:
+                message.pretty_print()
+
+    def run_campaign(self, context):
+        
+        config = {"configurable": {"thread_id": "1"}}
+        inputs = {"messages": [("user", "{}".format(context))]}
+        def print_stream(stream):
+            for s in stream:
+                message = s["messages"][-1]
+                if isinstance(message, tuple):
+                    print(message)
+                else:
+                    message.pretty_print()
+        print_stream(self.agent.stream(inputs, config=config, stream_mode="values"))
+
+        return "succes"
+
+def plan_generator(context: str, tools, llm) -> str:
+    # Create a plan for the based on user context using llm
+    
+    prompt = (
+        f"You are a social media marketing expert for some web3 company. "
+        f"Create a plan for the following context: {context} given the following tools \n {tools}. "
+        f"Provide as simple,to the point, brief plan as possble , which include 1 tweet(strictly) only. onchain activity only if required basd on your creativity and user requirement. keep it simple and short in brief, to the point , what is plan  what what to do what sequence . do not add unncessary details. "
+    )
+    messages = [
+        HumanMessage(content=prompt),
+    ]
+    plan = llm.invoke(messages)
+    return plan
+
+# Define the request model for the planner endpoint
+class PlanRequest(BaseModel):
+    context: str
+
+@app.post("/planner")
+def planner_endpoint(request: PlanRequest):
+    # Select the LLM based on the user's choice
+    llm = llm = ChatMistralAI(model="mistral-small-latest",temperature=0.3,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
+    plan = plan_generator(request.context, combined_tools, llm)
+    return plan
 
 @app.post("/run-campaign", response_model=CampaignResponse)
 async def run_campaign(campaign: CampaignRequest):
     try:
         # Select the LLM based on the user's choice
         if campaign.llm_type == "openai":
-            llm = ChatOpenAI(model="gpt-4")  # You can adjust the model version if needed
+            llm = ChatOpenAI(model="gpt-4o-mini")
         elif campaign.llm_type == "gemini":
             llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=os.getenv("GEMINI_API_KEY"))
+        elif campaign.llm_type == "mistral":
+            llm = ChatMistralAI(model="mistral-large-latest",temperature=0.1,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
         else:
             raise HTTPException(status_code=400, detail="Invalid LLM type specified")
 
-        # Create specialized agents
-        cdp_agent = create_react_agent(llm, base_tools,state_modifier="You are a helpful agent that can interact with the Base blockchain using CDP AgentKit. You can create wallets, deploy tokens, and perform transactions.")
-        twitter_agent = create_react_agent(llm, twitter_tools)
+        # Create the unified Web3 Social Marketing Agent
+        agent = Web3SocialMarketingAgent(llm, combined_tools)
+        plan_llm=ChatMistralAI(model="mistral-small-latest",temperature=0.3,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
+        # Generate the plan
+        # plan = plan_generator(campaign.context, combined_tools, plan_llm)
 
-        # Coordinator agent logic
-        def coordinator_agent(context):
-            # Decide which agent to use based on the context
-            if "twitter" in context.lower():
-                return twitter_agent
-            elif "cdp" in context.lower():
-                return cdp_agent
-            else:
-                # Default to CDP agent if no specific context is found
-                return cdp_agent
+        # Run the campaign
+        result = agent.run_campaign(campaign.context)
 
-        # Determine which agent to use
-        agent = coordinator_agent(campaign.context)
-
-        # Execute the agent
-        events = agent.stream(
-            {
-                "messages": [
-                    HumanMessage(content=campaign.context),
-                ],
-            },
-            stream_mode="values",
-        )
-
-        # Process the events
-        
-        for event in events:
-            event["messages"][-1].pretty_print()
-
-        # Return the result
-        return CampaignResponse(result="success")
+        return CampaignResponse(result=result)
 
     except HTTPException as http_error:
-        raise http_error  # Propagate HTTPException for FastAPI to handle
+        raise http_error
     except Exception as e:
-        # Handle other types of errors and log the detailed message
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+# Endpoint for testing
+@app.get("/test-agent")
+async def test_agent():
+    try:
+        # Use OpenAI as default LLM for testing
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=os.getenv("GEMINI_API_KEY"))
+
+        # Create agent with combined tools
+        agent = Web3SocialMarketingAgent(llm, combined_tools)
+
+        # Test with a sample context
+        test_context = (
+            "Create a token for a community project. The token should be named baw8a with symbol 0bawa, 3 in quantity."
+        )
+
+        result = agent.run_campaign(test_context)
+
+        return {"result": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
 
 # Run the FastAPI app
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="localhost", port=8000)
