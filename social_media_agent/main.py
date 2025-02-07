@@ -14,6 +14,7 @@ from cdp_langchain.utils import CdpAgentkitWrapper
 from langchain_mistralai import ChatMistralAI
 from langgraph.checkpoint.memory import MemorySaver
 from tools.graph_uniswap_tool import uniswap_analysis_tool
+from tools.tweet_tracker import log_tweet
 import asyncio
 import websockets
 import json
@@ -36,7 +37,7 @@ twitter_tools = twitter_toolkit.get_tools()
 base_tools = cdp_toolkit.get_tools()
 
 # Combine all tools
-combined_tools = base_tools + twitter_tools + [uniswap_analysis_tool]
+combined_tools = base_tools + twitter_tools + [uniswap_analysis_tool]+[log_tweet]
 
 # Initialize FastAPI
 app = FastAPI()
@@ -64,6 +65,7 @@ class Web3SocialMarketingAgent:
             state_modifier=(
                 "You are a sophisticated Web 3 Social Marketing Agent. "
                 "You can interact with blockchain tools and social media platforms. "
+                "Whenever you make tweet , always log the tweet id for tracking and analysis without failing call log_tweet tool"
                 "Your goal is to create engaging content, deploy tokens, and manage social media presence. "
                 "Use blockchain tools to generate content and Twitter tools to share insights."
             ),
@@ -101,6 +103,7 @@ def plan_generator(context: str, tools, llm) -> str:
         f"You are a social media marketing expert for some web3 company. "
         f"Create a plan for the following context: {context} given the following tools \n {tools}. "
         f"Provide as simple,to the point, brief plan as possble , which include 1 tweet(strictly) only. onchain activity only if required basd on your creativity and user requirement. keep it simple and short in brief, to the point , what is plan  what what to do what sequence . do not add unncessary details. "
+        
     )
     messages = [
         HumanMessage(content=prompt),
@@ -139,7 +142,7 @@ async def run_campaign(campaign: CampaignRequest):
         plan_llm=ChatMistralAI(model="mistral-small-latest",temperature=0.3,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
         # Generate the plan
         # plan = plan_generator(campaign.context, combined_tools, plan_llm)
-
+        # external_prompt= "if you planned to tweet then make sure to log  tweet id for tracking and analysis without failing call log_tweet tool" 
         # Run the campaign
         result =  agent.run_campaign(campaign.context)
 
