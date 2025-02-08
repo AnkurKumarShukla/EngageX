@@ -15,9 +15,9 @@ from langchain_mistralai import ChatMistralAI
 from langgraph.checkpoint.memory import MemorySaver
 from tools.graph_uniswap_tool import uniswap_analysis_tool
 from tools.tweet_tracker import log_tweet
-import asyncio
-import websockets
-import json
+from typing import List, Dict
+import csv
+import tweepy
 memory = MemorySaver()
 # Load environment variables
 load_dotenv()
@@ -152,6 +152,108 @@ async def run_campaign(campaign: CampaignRequest):
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+# Define response model for all tweets log
+class TweetLogResponse(BaseModel):
+    tweet_id: str
+    datetime: str
+
+# Define response model for tweet analytics
+class TweetAnalyticsResponse(BaseModel):
+    tweet_id: str
+    likes: int
+    retweets: int
+    comments: int
+
+# Function to fetch analytics for a tweet ID
+def get_tweet_analytics(tweet_id: str) -> Dict[str, int]:
+    try:
+        # Fetch tweet metrics using Tweepy
+        TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
+
+        client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN,consumer_key=os.getenv("TWITTER_API_KEY"),consumer_secret=os.getenv("TWITTER_API_SECRET"),access_token=os.getenv("TWITTER_ACCESS_TOKEN"),access_token_secret=os.getenv("TWITTER_ACCESS_TOKEN_SECRET"), wait_on_rate_limit=True)
+        tweet_data = client.get_tweet(
+            id=tweet_id,
+            tweet_fields=["public_metrics", "organic_metrics", "non_public_metrics"],
+            media_fields=["public_metrics"],
+            expansions=["attachments.media_keys"],
+            user_auth=True
+            
+        )
+
+        if not tweet_data.data:
+            return {"tweet_id": tweet_id, "error": "Tweet not found or private"}
+
+        metrics = tweet_data.data.get("public_metrics", {})
+
+        # Extract tweet analytics
+        likes = metrics.get("like_count", 0)
+        retweets = metrics.get("retweet_count", 0)
+        replies = metrics.get("reply_count", 0)
+        quotes = metrics.get("quote_count", 0)
+        impressions = metrics.get("impression_count", 0)  # Requires elevated API access
+        engagement = likes + retweets + replies + quotes  # Sum of all interactions
+
+        return {
+            "tweet_id": tweet_id,
+            "likes": likes,
+            "retweets": retweets,
+            "replies": replies,
+            "quotes": quotes,
+            "impressions": impressions,
+            "engagement": engagement
+        }
+
+    except Exception as e:
+        print(f"Error fetching analytics for {tweet_id}: {e}")
+        return {"tweet_id": tweet_id, "error": str(e)}
+# 📌 1️⃣ Get all logged tweets
+@app.get("/tweets-log")
+async def get_tweets_log():
+    csv_file = "tweet_data/tweet_history.csv"
+    
+    if not os.path.exists(csv_file):
+        raise HTTPException(status_code=404, detail="No tweets logged yet.")
+
+    tweets = []
+    
+    # Read all tweets from CSV file
+    with open(csv_file, mode="r", encoding="utf-8") as file:
+        reader = csv.reader(file)
+        next(reader, None)  # Skip header
+        for row in reader:
+            tweets.append({"tweet_id": row[0], "datetime": row[1]})
+
+    if not tweets:
+        raise HTTPException(status_code=404, detail="No tweets found in the log.")
+
+    return tweets
+
+# 📌 2️⃣ Get analytics for a specific tweet ID
+@app.get("/tweet-analytics/{tweet_id}")
+async def fetch_tweet_analytics(tweet_id: str):
+    return get_tweet_analytics(tweet_id)
+
+# 📌 3️⃣ Get analytics for the latest added tweet
+@app.get("/latest-tweet-analytics")
+async def fetch_latest_tweet_analytics():
+    csv_file = "tweet_logs/tweets.csv"
+    
+    if not os.path.exists(csv_file):
+        raise HTTPException(status_code=404, detail="No tweets logged yet.")
+    
+    latest_tweet_id = None
+
+    # Read only the last tweet ID from CSV file
+    with open(csv_file, mode="r", encoding="utf-8") as file:
+        reader = list(csv.reader(file))
+        if len(reader) <= 1:  # Only header exists
+            raise HTTPException(status_code=404, detail="No tweets found in the log.")
+        latest_tweet_id = reader[-1][0]  # Get last tweet ID
+
+    return get_tweet_analytics(latest_tweet_id)
+
 
 # Endpoint for testing
 @app.get("/test-agent")
