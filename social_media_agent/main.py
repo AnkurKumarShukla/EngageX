@@ -68,11 +68,9 @@ class Web3SocialMarketingAgent:
                 "give some more explanation on the importance of the step taken and how it will help in the campaign. "
                 "You can interact with blockchain tools and social media platforms. "
                 "Whenever you make tweet , always log the tweet id for tracking and analysis without failing call log_tweet tool"
-                "Your goal is to create engaging content, deploy tokens, and manage social media presence. "
                 "Use blockchain tools to generate content and Twitter tools to share insights."
                 "whenever token deployment ocuur  take  name as 'ENG coin' and symbol as 'ENG' and quantity as '1000'"
-                "Base uri - https://nextbrains.in/  when ever nft token creation is done"
-                "if asked to increase community engagement here are some ideas to consider - nft deployment giveaway (just deploy nft on base uri given no need to min ton my address , i tweet ask community to drop there address in comment), token creation and deployment and tweet about it, tweet about latest market analytics "
+                "if u decided to deploy nft collection then no need to mint nft just give collection address "
             ),
             checkpointer=memory
         )
@@ -105,10 +103,24 @@ def plan_generator(context: str, tools, llm) -> str:
     # Create a plan for the based on user context using llm
     
     prompt = (
-        f"You are a social media marketing expert for some web3 company. "\
-        f"first add  some faucet fund in your wallet. "
-        f"Create a plan for the following context: {context} given the following tools \n {tools}. "
-        f"Provide as simple,to the point, brief plan as possble , which include 1 tweet(strictly) only. onchain activity only if required basd on your creativity and user requirement. keep it simple and short in brief, to the point , what is plan  what what to do what sequence . do not add unncessary details. "
+        
+        f"""
+        user context: {context}
+        tools: {tools}
+        If the task requires funds or have onchain activity, first ensure the wallet has faucet funds.
+
+If the user provides a goal, generate a concise step-by-step plan using the given tools to achieve it. Keep it short, direct, and free of unnecessary details.
+. give proper plan step by step which tool to use .  also mention how give plan is beneficial in given scenario . give plan in brief  small and direct way Otherwise, simply execute the user request using the available tools. 
+
+If the user asks to increase community engagement then only , randomly choose one of the following (not all at once) use any dummy data whereever required , and mention tool used to achieve the task and input decided :(choose any one randomly) 
+    - Create and deploy a token ( take any appropriate name and symbol and quantity), then tweet about it.
+    - Deploy an NFT collection (use a any dummy example base URI, no need to mint on your address). Then, tweet asking the community to drop their addresses in the comments.
+    
+    - Tweet about the latest market analytics.
+
+
+ """
+
         
     )
     messages = [
@@ -126,7 +138,7 @@ class PlanRequest(BaseModel):
 @app.post("/planner")
 def planner_endpoint(request: PlanRequest):
     # Select the LLM based on the user's choice
-    llm = llm = ChatMistralAI(model="mistral-small-latest",temperature=0.3,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
+    llm = ChatOpenAI(model="gpt-4o-mini", api_key=os.getenv("OPENAI_API_KEY"))
     plan = plan_generator(request.context, combined_tools, llm)
     return plan
 
@@ -145,7 +157,7 @@ async def run_campaign(campaign: CampaignRequest):
 
         # Create the unified Web3 Social Marketing Agent
         agent = Web3SocialMarketingAgent(llm, combined_tools)
-        plan_llm=ChatMistralAI(model="mistral-small-latest",temperature=0.3,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
+        plan_llm= ChatOpenAI(model="gpt-4o",api_key=os.getenv("OPENAI_API_KEY"))
         # Generate the plan
         plan = plan_generator(campaign.context, combined_tools, plan_llm)
         # external_prompt= "if you planned to tweet then make sure to log  tweet id for tracking and analysis without failing call log_tweet tool" 
