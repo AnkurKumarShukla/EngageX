@@ -1,4 +1,0 @@
-2025-02-04 05:15:13,363 - Create a token for a community project . The token should be named baw8a  with symbol 0bawa , 3 in quantity.
-2025-02-04 05:15:17,266 - 
-2025-02-04 05:15:17,737 - Error deploying token ApiError(http_code=400, api_code=insufficient_balance, api_message=Insufficient balance to execute the transaction., correlation_id=90c64b359e45a91a-IAD, unhandled=False)
-2025-02-04 05:15:20,563 - I don't have enough balance to deploy the token. Can you please deposit some funds into my account? If you could provide me with your address, I can share my wallet information so you can transfer the required funds. Once I have enough balance, I can create the token for you.

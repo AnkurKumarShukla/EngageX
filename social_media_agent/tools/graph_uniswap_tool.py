@@ -61,16 +61,16 @@ def analyze_uniswap_data(query: str = "") -> str:
     data = str(data)
     print(data)
     prompt = f"""
-    Here is the latest Uniswap market data:
+    Here is the latest  market data:
     
     {data}
     
-    {f'Focus on: {query}' if query else 'Please provide short,brief (under 230 character), to the point insights on trends, anomalies, and overall market activity as this will be used to tweet in community to increase reach.as it will be used to tweet . no other greeting and unnecessary stuff'}
+    {f'Focus on: {query}' if query else 'Please provide short,brief (under 230 character), to the point insights on trends, anomalies, and overall market activity as this will be used to tweet in community to increase reach.as it will be used to tweet . no other greeting and unnecessary stuff. start with something  that  catches attention'}
     """
     
-    # response = llm.invoke(prompt)
-    # return response.content if hasattr(response, "content") else response
-    return prompt
+    response = llm.invoke(prompt)
+    return response.content if hasattr(response, "content") else response
+    # return prompt
 
 # Define the tool using StructuredTool
 uniswap_analysis_tool = StructuredTool.from_function(

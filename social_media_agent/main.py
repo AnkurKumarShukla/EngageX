@@ -64,10 +64,15 @@ class Web3SocialMarketingAgent:
             self.tools,
             state_modifier=(
                 "You are a sophisticated Web 3 Social Marketing Agent. "
+                "first of all: add faucet fund in your wallet"
+                "give some more explanation on the importance of the step taken and how it will help in the campaign. "
                 "You can interact with blockchain tools and social media platforms. "
                 "Whenever you make tweet , always log the tweet id for tracking and analysis without failing call log_tweet tool"
                 "Your goal is to create engaging content, deploy tokens, and manage social media presence. "
                 "Use blockchain tools to generate content and Twitter tools to share insights."
+                "whenever token deployment ocuur  take  name as 'ENG coin' and symbol as 'ENG' and quantity as '1000'"
+                "Base uri - https://nextbrains.in/  when ever nft token creation is done"
+                "if asked to increase community engagement here are some ideas to consider - nft deployment giveaway (just deploy nft on base uri given no need to min ton my address , i tweet ask community to drop there address in comment), token creation and deployment and tweet about it, tweet about latest market analytics "
             ),
             checkpointer=memory
         )
@@ -100,7 +105,8 @@ def plan_generator(context: str, tools, llm) -> str:
     # Create a plan for the based on user context using llm
     
     prompt = (
-        f"You are a social media marketing expert for some web3 company. "
+        f"You are a social media marketing expert for some web3 company. "\
+        f"first add  some faucet fund in your wallet. "
         f"Create a plan for the following context: {context} given the following tools \n {tools}. "
         f"Provide as simple,to the point, brief plan as possble , which include 1 tweet(strictly) only. onchain activity only if required basd on your creativity and user requirement. keep it simple and short in brief, to the point , what is plan  what what to do what sequence . do not add unncessary details. "
         
@@ -141,10 +147,10 @@ async def run_campaign(campaign: CampaignRequest):
         agent = Web3SocialMarketingAgent(llm, combined_tools)
         plan_llm=ChatMistralAI(model="mistral-small-latest",temperature=0.3,max_retries=2,mistral_api_key=os.getenv("MISTRAL_API_KEY"))
         # Generate the plan
-        # plan = plan_generator(campaign.context, combined_tools, plan_llm)
+        plan = plan_generator(campaign.context, combined_tools, plan_llm)
         # external_prompt= "if you planned to tweet then make sure to log  tweet id for tracking and analysis without failing call log_tweet tool" 
         # Run the campaign
-        result =  agent.run_campaign(campaign.context)
+        result =  agent.run_campaign(plan)
 
         return CampaignResponse(result=result)
 
@@ -238,7 +244,7 @@ async def fetch_tweet_analytics(tweet_id: str):
 # 📌 3️⃣ Get analytics for the latest added tweet
 @app.get("/latest-tweet-analytics")
 async def fetch_latest_tweet_analytics():
-    csv_file = "tweet_logs/tweets.csv"
+    csv_file = "tweet_data/tweet_history.csv"
     
     if not os.path.exists(csv_file):
         raise HTTPException(status_code=404, detail="No tweets logged yet.")
@@ -255,27 +261,23 @@ async def fetch_latest_tweet_analytics():
     return get_tweet_analytics(latest_tweet_id)
 
 
-# Endpoint for testing
-@app.get("/test-agent")
-async def test_agent():
-    try:
-        # Use OpenAI as default LLM for testing
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=os.getenv("GEMINI_API_KEY"))
+# # Endpoint for testing
+# @app.get("/test-agent")
+# async def test_agent():
+#     try:
+#         test= os.getenv("MISTRAL_API_KEY")
+#         return test
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+    
+class ChatRequest(BaseModel):
+    message: str
 
-        # Create agent with combined tools
-        agent = Web3SocialMarketingAgent(llm, combined_tools)
-
-        # Test with a sample context
-        test_context = (
-            "Create a token for a community project. The token should be named baw8a with symbol 0bawa, 3 in quantity."
-        )
-
-        result = agent.run_campaign(test_context)
-
-        return {"result": result}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    if request.message == "healthz":
+        return {"status": "ok"}
+    return {"response": f"Received: {request.message}"}
 
 # Run the FastAPI app
 if __name__ == "__main__":

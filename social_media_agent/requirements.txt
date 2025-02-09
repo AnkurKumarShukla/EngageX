@@ -35,8 +35,10 @@ eth-typing==5.1.0
 eth-utils==5.2.0
 eth_abi==5.2.0
 fastapi==0.115.8
+filelock==3.17.0
 filetype==1.2.0
 frozenlist==1.5.0
+fsspec==2025.2.0
 google-ai-generativelanguage==0.6.15
 google-api-core==2.24.1
 google-api-python-client==2.160.0
@@ -53,6 +55,7 @@ httpcore==1.0.7
 httplib2==0.22.0
 httpx==0.28.1
 httpx-sse==0.4.0
+huggingface-hub==0.28.1
 idna==3.10
 jiter==0.8.2
 jsonpatch==1.33
@@ -61,6 +64,7 @@ langchain==0.3.17
 langchain-community==0.3.16
 langchain-core==0.3.33
 langchain-google-genai==2.0.9
+langchain-mistralai==0.2.6
 langchain-openai==0.2.14
 langchain-text-splitters==0.3.5
 langgraph==0.2.69
@@ -94,7 +98,6 @@ pyparsing==3.2.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pyunormalize==16.0.0
-pywin32==308
 PyYAML==6.0.2
 regex==2024.11.6
 requests==2.32.3
@@ -109,6 +112,7 @@ standard-imghdr==3.13.0
 starlette==0.45.3
 tenacity==9.0.0
 tiktoken==0.8.0
+tokenizers==0.21.0
 toolz==1.0.0
 tqdm==4.67.1
 tweepy==4.15.0
