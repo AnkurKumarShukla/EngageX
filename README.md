@@ -11,6 +11,31 @@ Hypersync is an AI-driven Web3 social media management agent that automates cont
 
 ## Endpoint : POST```<url>/run-campaign```  <br>  GET```<url>/latest-tweet-analytics```
 
+## 🛠 Installation & Usage
+
+### Run Locally
+
+```bash
+git clone https://github.com/your-repo/hypersync.git
+cd hypersync/social_media_agent
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+### Run with Docker
+
+1. Build the Docker image:
+   ```bash
+   git clone https://github.com/your-repo/hypersync.git
+   cd hypersync/social_media_agent
+   docker build -t <<prefered name of image>> .
+   ```
+2. Run the container:
+   ```bash
+   docker run -p 8000:8000 <<image name u specified above>>
+   ```
+
+---
 
 
 
