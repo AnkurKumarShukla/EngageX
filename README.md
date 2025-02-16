@@ -37,7 +37,13 @@ uvicorn main:app --reload
 
 ---
 
+### Use Directly via Autonome
 
+1. Go to [Autonome Platform](https://dev.autonome.fun/autonome).
+2. Search for **EngageX Framework**.
+3. Create an agent using that framework.
+4. Use the **URL key** provided to make requests directly.
+5. Alternatively, use the agent interface available on Autonome to interact with Hypersync.
 
 ## 🚀 Features
 
