@@ -16,8 +16,8 @@ Hypersync is an AI-driven Web3 social media management agent that automates cont
 ### Run Locally
 
 ```bash
-git clone [https://github.com/your-repo/hypersync.git](https://github.com/AnkurKumarShukla/EngageX.git)
-cd hypersync/social_media_agent
+git clone https://github.com/AnkurKumarShukla/EngageX.git
+cd EngageX/social_media_agent
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
@@ -26,8 +26,8 @@ uvicorn main:app --reload
 
 1. Build the Docker image:
    ```bash
-   git clone [https://github.com/your-repo/hypersync.git](https://github.com/AnkurKumarShukla/EngageX.git)
-   cd hypersync/social_media_agent
+   git clone https://github.com/AnkurKumarShukla/EngageX.git
+   cd EngageX/social_media_agent
    docker build -t <<prefered name of image>> .
    ```
 2. Run the container:
