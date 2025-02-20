@@ -1,5 +1,6 @@
 # Hypersync: AI-Powered Web3 Social Media Management Agent
-![image](https://github.com/user-attachments/assets/1bf526a1-c1e6-4753-bdd6-fb2da597171a)
+![Screenshot 2025-02-21 032202](https://github.com/user-attachments/assets/baef5a6a-4d8e-4a1a-8f81-e63a4c311e02)
+
 
 Hypersync is an AI-driven Web3 social media management agent that automates content creation, engagement strategies, and on-chain activities for companies. By integrating multiple AI models, blockchain tools, and social media automation, it eliminates the need for multiple human operators, handling everything from campaign planning to post tracking and analytics.
 
